@@ -21,7 +21,7 @@ module.exports = {
             filename: (req, file, cb) => {
                 let originalname = file.originalname;
                 let ext = originalname.split('.');
-                let filename = 'test.' + ext[ext.length - 1];
+                let filename = fileNamePrefix + Date.now() + '.' + ext[ext.length - 1];
                 cb(null, filename);
             }
         });
