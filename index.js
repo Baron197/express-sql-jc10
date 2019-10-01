@@ -2,6 +2,7 @@ const express = require('express')
 const mysql = require('mysql')
 const bodyParser = require('body-parser')
 const cors = require('cors')
+const { uploader } = require('./uploader')
 
 const app = express()
 const port = process.env.PORT || 1997
@@ -199,6 +200,26 @@ app.put('/edittoko/:id', (req,res) => {
         }
 
         res.status(200).send(results)
+    })
+})
+
+app.post('/addimagetoko', (req,res) => {
+    const path = '/images/toko';
+    const upload = uploader(path, 'TOK').fields([{ name: 'image' }]);
+
+    upload(req, res, (err) => {
+        if(err){
+            return res.status(500).json({ message: 'Upload file failed !', error: err.message });
+        }
+
+        const { image } = req.files;
+        console.log(image)
+
+        console.log(req.body.data)
+        const data = JSON.parse(req.body.data);
+        console.log(data)
+        
+        return res.status(200).send({ message: 'Upload File Success!'})
     })
 })
 
