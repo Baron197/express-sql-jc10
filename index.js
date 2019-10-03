@@ -3,6 +3,7 @@ const mysql = require('mysql')
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const { uploader } = require('./uploader')
+const fs = require('fs')
 
 const app = express()
 const port = process.env.PORT || 1997
@@ -218,9 +219,102 @@ app.post('/addimagetoko', (req,res) => {
         console.log(req.body.data)
         const data = JSON.parse(req.body.data);
         console.log(data)
-        
-        return res.status(200).send({ message: 'Upload File Success!'})
+        var insertData = []
+        for(var i = 0; i < image.length; i++) {
+            insertData.push([`${path}/${image[i].filename}`, data.tokoId])
+        }
+
+        var sql = `INSERT INTO imagetoko (pathName,tokoId) VALUES ? `;
+        db.query(sql,[insertData], (err,results) => {
+            if(err) {
+                for(var i = 0; i < image.length; i++) {
+                    fs.unlinkSync('./public' + path + '/' + image[i].filename)
+                }
+                return res.status(500).send(err)
+            }
+
+            res.status(200).send(results)
+        })
     })
 })
+
+// var multer  = require('multer')
+// var upload = multer({ dest: 'uploads/' })
+
+// app.post('/testcontoh', upload.single('image'), (req,res,next) => {
+//     console.log(req.file)
+//     console.log(req.body)
+//     res.send('test')
+// })
+
+app.get('/imagetoko/:id', (req,res) => {
+    var sql = `SELECT it.*, t.nama as NamaToko from imagetoko it
+            JOIN toko t
+            ON t.id = it.tokoId
+            WHERE tokoId = ${db.escape(req.params.id)}`;
+    console.log(sql)
+    db.query(sql, (err, results) => {
+        if(err) return res.status(500).send(err)
+
+        res.status(200).send(results)
+    })
+})
+
+app.put('/imagetoko/:id', (req,res) => {
+    var sql = `SELECT * FROM imagetoko WHERE id = ${db.escape(req.params.id)}`;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).send(err)
+
+        if(results.length > 0) {
+            const path = '/images/toko';
+            const upload = uploader(path, 'TOK').fields([{ name: 'image' }]);
+
+            upload(req, res, (err) => {
+                if(err){
+                    return res.status(500).json({ message: 'Upload file failed !', error: err.message });
+                }
+        
+                const { image } = req.files;
+                console.log(image)
+        
+
+                const data = { pathName: path + '/' + image[0].filename }
+        
+                sql = `UPDATE imagetoko SET ? WHERE id = ${req.params.id};`
+                db.query(sql,data, (err,results1) => {
+                    if(err) {
+                        fs.unlinkSync('./public' + path + '/' + image[0].filename)
+                        return res.status(500).send(err)
+                    }
+
+                    fs.unlinkSync('./public' + results[0].pathName)
+                    res.status(200).send(results1)
+                })
+            })
+        }
+    })
+})
+// http://localhost:1997/imagetoko/6 DELETE
+app.delete('/imagetoko/:id', (req,res) => {
+    var sql = `SELECT * FROM imagetoko WHERE id = ${db.escape(req.params.id)}`;
+
+    db.query(sql, (err,results) => {
+        if(err) return res.status(500).send(err)
+
+        sql = `DELETE FROM imagetoko WHERE id = ${db.escape(req.params.id)}`;
+        db.query(sql,(err, results1) => {
+            if(err) return res.status(500).send(err)
+
+            fs.unlinkSync('./public' + results[0].pathName)
+            
+            res.status(200).send(results1)
+        })
+    })
+})
+
+// var nama = `' or ''='`
+// var password = `' or ''='`
+
+// var sql = `SELECT * from users where username = ${db.escape(nama)} and password = '${password}'`;
 
 app.listen(port, () => console.log(`API aktif di port ${port}`))
