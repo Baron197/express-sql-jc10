@@ -4,6 +4,7 @@ const bodyParser = require('body-parser')
 const cors = require('cors')
 const { uploader } = require('./uploader')
 const fs = require('fs')
+const nodemailer = require('nodemailer')
 
 const app = express()
 const port = process.env.PORT || 1997
@@ -18,12 +19,39 @@ const db = mysql.createConnection({
     // timezone: 'UTC'
 })
 
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'baronhartono@gmail.com',
+        pass: 'jjzzmcusnrmscrzf'
+    },
+    tls: {
+        rejectUnauthorized: false
+    }
+})
+
 app.use(bodyParser.json())
 app.use(cors())
 app.use(express.static('public'))
 
 app.get('/', (req,res) => {
     res.status(200).send('<h1>Welcome To our API</h1>')
+})
+
+app.get('/sendmail', (req,res) => {
+    var mailOption = {
+        from: "Penguasa Toko Berkah <baronhartono@gmail.com>",
+        to: "hartono_baron@yahoo.com",
+        subject: "Undangan Bergabung",
+        html: `Bergabunglah menjadi member Toko Berkah dengan
+            mengclick link ini  <a href="https://google.com">Bergabung</a>`
+    }
+
+    transporter.sendMail(mailOption, (err,results) => {
+        if(err) return res.status(500).send(err)
+
+        res.status(200).send({ status: 'Send Email Success', result: results})
+    })
 })
 
 app.get('/getkota', (req,res) => {
@@ -316,5 +344,17 @@ app.delete('/imagetoko/:id', (req,res) => {
 // var password = `' or ''='`
 
 // var sql = `SELECT * from users where username = ${db.escape(nama)} and password = '${password}'`;
+
+app.post('/register', (req,res) => {
+    req.body.status = 'Unverified'
+    req.body.tanggalBergabung = new Date()
+
+    var sql = `INSERT INTO users SET ? `;
+    db.query(sql, req.body, (err, results) => {
+        if(err) return res.status(500).send({ message:'Database Error Bro!', err })
+
+        res.status(200).send(results)
+    })
+})
 
 app.listen(port, () => console.log(`API aktif di port ${port}`))
