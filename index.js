@@ -5,6 +5,7 @@ const cors = require('cors')
 const { uploader } = require('./uploader')
 const fs = require('fs')
 const nodemailer = require('nodemailer')
+const crypto = require('crypto')
 
 const app = express()
 const port = process.env.PORT || 1997
@@ -349,11 +350,76 @@ app.post('/register', (req,res) => {
     req.body.status = 'Unverified'
     req.body.tanggalBergabung = new Date()
 
-    var sql = `INSERT INTO users SET ? `;
-    db.query(sql, req.body, (err, results) => {
-        if(err) return res.status(500).send({ message:'Database Error Bro!', err })
+    const secret = 'teletubies';
+    req.body.password = crypto.createHmac('sha256', secret)
+                    .update(req.body.password)
+                    .digest('hex');
+    var sql = `SELECT * FROM users WHERE email = '${req.body.email}';`;
 
-        res.status(200).send(results)
+    db.query(sql, (err,results) => {
+        if(err) return res.status(500).send({ message:'Database Error Bro!', err, error: true })
+
+        if(results.length > 0) {
+            return res.status(500).send({ message: 'Email has been taken!', error: true})
+        }
+
+        sql = `INSERT INTO users SET ? `;
+        db.query(sql, req.body, (err, results) => {
+            if(err) return res.status(500).send({ message:'Database Error Bro!', err, error: true })
+
+            var mailOption = {
+                from: "Toko Berkah <baronhartono@gmail.com>",
+                to: req.body.email,
+                subject: "Email Confirmation",
+                html: `Verified your email by clicking this link  
+                    <a href="http://localhost:3000/emailverified?email=${req.body.email}">Verified</a>`
+            }
+        
+            transporter.sendMail(mailOption, (err,results) => {
+                if(err) return res.status(500).send({ message: 'Kirim Email Confirmation Gagal!', err, error: false, email: req.body.email })
+        
+                res.status(200).send({ status: 'Send Email Success', result: results, email: req.body.email })
+            })
+        })
+    })
+})
+
+app.get('/testencrypt', (req,res) => {
+    const secret = 'teletubies';
+    const hash = crypto.createHmac('sha256', secret)
+                    .update('abc')
+                    .digest('hex');
+    console.log(hash.length)
+    res.status(200).send(hash)   
+})
+
+app.post('/resendemailconfirm', (req,res) => {
+    var mailOption = {
+        from: "Toko Berkah <baronhartono@gmail.com>",
+        to: req.body.email,
+        subject: "Email Confirmation",
+        html: `Verified your email by clicking this link  
+            <a href="http://localhost:3000/emailverified?email=${req.body.email}">Verified</a>`
+    }
+
+    transporter.sendMail(mailOption, (err,results) => {
+        if(err) return res.status(500).send({ message: 'Kirim Email Confirmation Gagal!', err })
+
+        res.status(200).send({ message: 'Send Email Success', result: results })
+    })
+})
+
+app.post('/confirmemail', (req,res) => {
+    var sql = `UPDATE users SET status='Verified' WHERE email='${req.body.email}';`;
+    db.query(sql, (err, results) => {
+        if(err) return res.status(500).send({ status: 'error', err })
+
+        sql = `SELECT id,username,email,status FROM users WHERE email = '${req.body.email}'`;
+        db.query(sql, (err,results) => {
+            if(err) return res.status(500).send({ err })
+
+            res.status(200).send(results[0])
+        })
     })
 })
 
