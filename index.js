@@ -6,6 +6,8 @@ const { uploader } = require('./uploader')
 const fs = require('fs')
 const nodemailer = require('nodemailer')
 const crypto = require('crypto')
+// const { kucing, jerapah } = require('./jwt')
+const { createJWTToken } = require('./jwt')
 
 const app = express()
 const port = process.env.PORT || 1997
@@ -418,9 +420,26 @@ app.post('/confirmemail', (req,res) => {
         db.query(sql, (err,results) => {
             if(err) return res.status(500).send({ err })
 
-            res.status(200).send(results[0])
+            var token = createJWTToken({ ...results[0] })
+
+            res.status(200).send({ ...results[0], token })
         })
     })
 })
+
+// app.get('/bikintoken', (req,res) => {
+//     var hasilEncrypt = kucing({ message: 'Kita Keren', code: 10010101, cihuy: 'test' })
+//     console.log('di bikin token', hasilEncrypt)
+//     res.status(200).send(`<h2>${hasilEncrypt}</h2>`)
+// })
+
+// app.get('/checktoken/:token', (req,res) => {
+//     jerapah(req.params.token, (kadaluarsa, hasil) => {
+//         if(kadaluarsa) return res.status(500).send('Token Kadaluarsa Bro')
+
+//         console.log('ini di checktoken',hasil)
+//         res.status(200).send(hasil)
+//     })
+// })
 
 app.listen(port, () => console.log(`API aktif di port ${port}`))
