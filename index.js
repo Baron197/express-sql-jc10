@@ -451,6 +451,10 @@ app.post('/login', (req,res) => {
     })
 })
 
+app.post('/keeplogin', (req,res) => {
+
+})
+
 // app.get('/bikintoken', (req,res) => {
 //     var hasilEncrypt = kucing({ message: 'Kita Keren', code: 10010101, cihuy: 'test' })
 //     console.log('di bikin token', hasilEncrypt)
