@@ -7,7 +7,7 @@ module.exports = {
             // let success = true;
             // console.log(req.token)
             // console.log(req.query)
-            jwt.verify(req.token, "puripuriprisoner", (error, decoded) => {
+            jwt.verify(req.token, "tinkiwinki", (error, decoded) => {
                 if (error) {
                     // success = false;
                     return res.status(401).json({ message: "User not authorized.", error: "User not authorized." });
