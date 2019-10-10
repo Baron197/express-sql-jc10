@@ -11,6 +11,7 @@ const { createJWTToken } = require('./jwt')
 
 const app = express()
 const port = process.env.PORT || 1997
+const secret = 'teletubies';
 
 const db = mysql.createConnection({
     host: 'localhost',
@@ -352,7 +353,6 @@ app.post('/register', (req,res) => {
     req.body.status = 'Unverified'
     req.body.tanggalBergabung = new Date()
 
-    const secret = 'teletubies';
     req.body.password = crypto.createHmac('sha256', secret)
                     .update(req.body.password)
                     .digest('hex');
@@ -420,10 +420,34 @@ app.post('/confirmemail', (req,res) => {
         db.query(sql, (err,results) => {
             if(err) return res.status(500).send({ err })
 
-            var token = createJWTToken({ ...results[0] })
+            var token = createJWTToken({ ...results[0] }, { expiresIn: '1h' })
 
             res.status(200).send({ ...results[0], token })
         })
+    })
+})
+
+app.post('/login', (req,res) => {
+    var { email, password } = req.body;
+    password = crypto.createHmac('sha256', secret)
+                    .update(password)
+                    .digest('hex');
+
+    var sql = `SELECT id,username,email,status 
+                FROM users 
+                WHERE email = ${db.escape(email)}
+                AND password = ${db.escape(password)};`;
+    
+    db.query(sql, (err, results) => {
+        if(err) return res.status(500).send({ err, message: 'Database Error' })
+
+        if(results.length === 0) {
+            return res.status(500).send({ message: 'Email or Password Incorrect' })
+        }
+
+        var token = createJWTToken({ ...results[0] }, { expiresIn: '1h' })
+
+        res.status(200).send({ ...results[0], token })
     })
 })
 

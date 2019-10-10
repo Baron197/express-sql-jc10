@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = {
-    createJWTToken: (payload) => {
-        return jwt.sign(payload, 'tinkiwinki', { expiresIn: '1h' })
+    createJWTToken: (payload, duration) => {
+        return jwt.sign(payload, 'tinkiwinki', duration)
     }
 }
 
